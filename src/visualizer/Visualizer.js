@@ -4,6 +4,12 @@ export class Visualizer {
         this.ctx = canvas.getContext('2d');
         this.audioController = audioController;
         this.isPlaying = false;
+        this.emotionText = null;
+
+        // Color transition properties
+        this.targetColor = { r: 173, g: 216, b: 230 }; // Start with light blue
+        this.currentColor = { r: 173, g: 216, b: 230 };
+        this.lerpSpeed = 0.05; // How fast to transition (0-1)
 
         this.resize();
         window.addEventListener('resize', () => this.resize());
@@ -28,6 +34,21 @@ export class Visualizer {
         this.isPlaying = false;
     }
 
+    setEmotion(emotion, color) {
+        this.emotionText = emotion; // Will be null when no emotion detected
+
+        // Parse hex color to RGB only if valid color provided
+        if (color && color.startsWith('#')) {
+            const hex = color.slice(1);
+            this.targetColor = {
+                r: parseInt(hex.substring(0, 2), 16),
+                g: parseInt(hex.substring(2, 4), 16),
+                b: parseInt(hex.substring(4, 6), 16)
+            };
+        }
+        // When emotion is null, the animate loop will use intensity-based color
+    }
+
     animate() {
         if (!this.isPlaying) return;
 
@@ -49,11 +70,22 @@ export class Visualizer {
         // This creates a low slope at the start and end, with a fast transition in the middle.
         const t = intensity * intensity * (3 - 2 * intensity);
 
-        // Interpolate between Light Blue (173, 216, 230) and Dark Red (139, 0, 0)
-        const r = Math.round(173 + (139 - 173) * t);
-        const g = Math.round(216 + (0 - 216) * t);
-        const b = Math.round(230 + (0 - 230) * t);
-        const color = `rgb(${r}, ${g}, ${b})`;
+        // Calculate intensity-based color (Light Blue to Dark Red)
+        const intensityR = Math.round(173 + (139 - 173) * t);
+        const intensityG = Math.round(216 + (0 - 216) * t);
+        const intensityB = Math.round(230 + (0 - 230) * t);
+
+        // If no emotion is set, use intensity color as target
+        if (!this.emotionText) {
+            this.targetColor = { r: intensityR, g: intensityG, b: intensityB };
+        }
+
+        // Smoothly lerp current color toward target color
+        this.currentColor.r += (this.targetColor.r - this.currentColor.r) * this.lerpSpeed;
+        this.currentColor.g += (this.targetColor.g - this.currentColor.g) * this.lerpSpeed;
+        this.currentColor.b += (this.targetColor.b - this.currentColor.b) * this.lerpSpeed;
+
+        const color = `rgb(${Math.round(this.currentColor.r)}, ${Math.round(this.currentColor.g)}, ${Math.round(this.currentColor.b)})`;
 
         // Dynamic radius based on volume
         const radius = this.baseRadius + (volume * 1.5);
@@ -63,6 +95,15 @@ export class Visualizer {
         this.ctx.fillStyle = color;
         this.ctx.fill();
         this.ctx.closePath();
+
+        // Draw emotion text in the center
+        if (this.emotionText) {
+            this.ctx.fillStyle = '#050505';
+            this.ctx.font = `bold ${Math.round(radius * 0.25)}px Inter, system-ui, sans-serif`;
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(this.emotionText, this.centerX, this.centerY);
+        }
 
         // Draw radial bars
         const bars = 64; // Number of bars to draw

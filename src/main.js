@@ -2,6 +2,7 @@ import './style.css'
 import { AudioController } from './audio/AudioController.js'
 import { Visualizer } from './visualizer/Visualizer.js'
 import { TranscriptionController } from './audio/TranscriptionController.js'
+import { EmotionController } from './audio/EmotionController.js'
 
 document.addEventListener('DOMContentLoaded', () => {
   const startBtn = document.getElementById('start-btn');
@@ -12,10 +13,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // Instantiate classes
   const audioController = new AudioController();
   const visualizer = new Visualizer(canvas, audioController);
+  const emotionController = new EmotionController();
 
   let clearSubtitleTimeout;
   const transcriptionController = new TranscriptionController((text, isFinal) => {
     subtitles.textContent = text;
+
+    // Feed transcript to emotion controller
+    emotionController.addTranscript(text);
+
+    // Get current emotion and update visualizer
+    const { emotion, color } = emotionController.getEmotion();
+    visualizer.setEmotion(emotion, color);
 
     if (isFinal) {
       clearTimeout(clearSubtitleTimeout);
