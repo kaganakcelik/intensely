@@ -42,15 +42,25 @@ export class Visualizer {
         const data = this.audioController.getAudioData();
         if (!data) return;
 
-        const { frequencyData, volume } = data;
+        const { frequencyData, volume, intensity } = data;
         const bufferLength = frequencyData.length;
+
+        // S-curve (smoothstep) for intensity-to-color mapping
+        // This creates a low slope at the start and end, with a fast transition in the middle.
+        const t = intensity * intensity * (3 - 2 * intensity);
+
+        // Interpolate between Light Blue (173, 216, 230) and Dark Red (139, 0, 0)
+        const r = Math.round(173 + (139 - 173) * t);
+        const g = Math.round(216 + (0 - 216) * t);
+        const b = Math.round(230 + (0 - 230) * t);
+        const color = `rgb(${r}, ${g}, ${b})`;
 
         // Dynamic radius based on volume
         const radius = this.baseRadius + (volume * 1.5);
 
         this.ctx.beginPath();
         this.ctx.arc(this.centerX, this.centerY, radius, 0, Math.PI * 2);
-        this.ctx.fillStyle = 'white';
+        this.ctx.fillStyle = color;
         this.ctx.fill();
         this.ctx.closePath();
 
@@ -63,14 +73,11 @@ export class Visualizer {
 
         for (let i = 0; i < bars; i++) {
             // Get frequency value for this bar
-            // We focus on the lower/mid frequencies which are more visually interesting usually
             const dataIndex = i * step;
             const value = frequencyData[dataIndex];
 
             // Map value to bar height
             const barHeight = Math.max(0, (value / 255) * (this.baseRadius * 1.5));
-
-            const rad = (Math.PI * 2) * (i / bars);
 
             this.ctx.rotate((Math.PI * 2) / bars);
 
@@ -79,7 +86,7 @@ export class Visualizer {
             // Start just outside the circle
             this.ctx.moveTo(0, radius + 5);
             this.ctx.lineTo(0, radius + 5 + barHeight);
-            this.ctx.strokeStyle = 'white';
+            this.ctx.strokeStyle = color;
             this.ctx.lineWidth = 2;
             this.ctx.lineCap = 'round';
             this.ctx.stroke();

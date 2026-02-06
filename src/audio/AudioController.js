@@ -13,12 +13,12 @@ export class AudioController {
         try {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             this.analyser = this.audioContext.createAnalyser();
-            
+
             // FFT Size determines the number of frequency bins
             // 2048 results in 1024 bins. We'll use a smaller number for broader bands if needed,
             // but 2048 gives good resolution.
-            this.analyser.fftSize = 512; 
-            
+            this.analyser.fftSize = 512;
+
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             this.microphone = this.audioContext.createMediaStreamSource(stream);
             this.microphone.connect(this.analyser);
@@ -47,11 +47,13 @@ export class AudioController {
             sum += this.dataArray[i];
         }
         const volume = sum / this.bufferLength;
+        const normalizedVolume = Math.min(1, volume / 128); // Normalize to 0-1 range, using 128 as a reasonable 'max' threshold for coloring
 
         return {
             frequencyData: this.dataArray,
             timeData: this.timeDataArray,
-            volume: volume
+            volume: volume,
+            intensity: normalizedVolume
         };
     }
 
